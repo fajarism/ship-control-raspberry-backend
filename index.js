@@ -7,14 +7,16 @@ const io = require("socket.io")(http, {
       }
 })
 const cors = require("cors");
-const moment = require('moment');
-const fs = require("fs")
-const fileUtils = require("./utilities/File")
+const Readline = require("@serialport/parser-readline")
+
+const fileUtils = require("./utilities/File");
+const SerialPort = require('serialport');
 
 const PORT_NUMBER = 4000
 
 let isRecording = false
 let fileStream
+let serialPort
 
 app.use(cors())
 
@@ -24,6 +26,12 @@ app.get('/', (req, res) => {
 
 io.on("connection", (socket) => {
     let streamRoutine = null
+
+    serialPort = new SerialPort("/dev/cu.usbmodem14101", {
+        baudRate : 9600
+    })
+    let serialReadlineParser = new Readline()
+    serialPort.pipe(serialReadlineParser)
     
     socket.on("disconnect", () => {
         console.log("disconnected")
@@ -56,20 +64,19 @@ io.on("connection", (socket) => {
         io.sockets.emit("ship_control_stream_recording_stopped", {})
     })
 
-    streamRoutine = setInterval(() => {
-        let timestamp = moment().valueOf()
-        let rudder = 20.0 + (Math.random() * 5)
-        let yaw = 0.0 + (Math.random() * 5) 
+    serialReadlineParser.on("data", (chunk) => {
+        // console.log(chunk)
+        let [timestamp, rudder, yaw] = chunk.split(",")
 
-        if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${rudder},${yaw} \n`)
+        if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}`)
 
-        socket.emit("ship_control_stream", {
+        io.sockets.emit("ship_control_stream", {
             timestamp,
-            rudder,
-            yaw
+            rudder : parseFloat(rudder),
+            yaw : parseFloat(yaw),
         })
-    }, 1000)
-
+    })
+ 
     console.log("a user connected")
 })
 
