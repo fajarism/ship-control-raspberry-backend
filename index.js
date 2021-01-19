@@ -2,12 +2,13 @@ const app = require('express')();
 const http = require('http').createServer(app);
 const io = require("socket.io")(http, {
     cors: {
-        origin: "http://127.0.0.1:3000",
+        origin: "http://192.168.31.150:3000",
         methods: ["GET", "POST"]
       }
 })
 const cors = require("cors");
 const Readline = require("@serialport/parser-readline")
+const ByteLine = require("@serialport/parser-byte-length")
 
 const fileUtils = require("./utilities/File");
 const SerialPort = require('serialport');
@@ -20,18 +21,27 @@ let serialPort
 
 app.use(cors())
 
+
+/*serialPort = new SerialPort("/dev/cu.usbmodem14101", {
+    baudRate : 9600
+})*/
+//serialPort.pipe(byteLineParser)
+
+serialPort = new SerialPort("/dev/ttyACM0", {
+        baudRate : 9600
+    })
+let serialReadlineParser = new Readline()
+let byteLineParser = new ByteLine({
+    length : 10
+})
+serialPort.pipe(serialReadlineParser)
+
 app.get('/', (req, res) => {
   res.send('<h1>Hello worlds</h1>');
 });
 
 io.on("connection", (socket) => {
-    let streamRoutine = null
-
-    serialPort = new SerialPort("/dev/cu.usbmodem14101", {
-        baudRate : 9600
-    })
-    let serialReadlineParser = new Readline()
-    serialPort.pipe(serialReadlineParser)
+    let streamRoutine = null    
     
     socket.on("disconnect", () => {
         console.log("disconnected")
@@ -64,12 +74,11 @@ io.on("connection", (socket) => {
         io.sockets.emit("ship_control_stream_recording_stopped", {})
     })
 
-    serialReadlineParser.on("data", (chunk) => {
-        // console.log(chunk)
-        let [timestamp, rudder, yaw] = chunk.split(",")
+    serialReadlineParser.on("data", (data) => {
+        //console.log(data)
+        let [timestamp, yaw, rudder] = data.split(",")
 
-        if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}`)
-
+        if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}\n`)
         io.sockets.emit("ship_control_stream", {
             timestamp,
             rudder : parseFloat(rudder),
