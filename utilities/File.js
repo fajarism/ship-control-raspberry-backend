@@ -38,5 +38,24 @@ module.exports = {
 
     saveToFile : (stream, data) => {
         stream.write(data)
+    },
+
+    getAllRecordFiles : () => {
+        let files = fs.readdirSync("./data/")
+
+        let returnFilteredFiles = []
+        files.forEach((item, index) => {
+            let file = fs.statSync(`./data/${item}`)
+            if(file.isFile()) returnFilteredFiles.push({
+                filename : item,
+                date : file.atimeMs
+            })    
+        })
+
+        returnFilteredFiles.sort((a, b) => {
+            return b.date - a.date
+        })
+
+        return returnFilteredFiles
     }
 }
