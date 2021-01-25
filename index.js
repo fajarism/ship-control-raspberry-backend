@@ -1,10 +1,10 @@
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require("socket.io")(http, {
-    cors: {
-        origin: "http://192.168.31.150:3000",
-        methods: ["GET", "POST"]
-      }
+    // cors: {
+    //     origin: "http://127.0.0.1:3000",
+    //     methods: ["GET", "POST"]
+    //   }
 })
 const cors = require("cors");
 const Readline = require("@serialport/parser-readline")
@@ -39,7 +39,7 @@ let byteLineParser = new ByteLine({
 serialPort.pipe(serialReadlineParser)
 
 
-app.get('/:filename/download', (req, res) => {
+app.get('/download/:filename', (req, res) => {
     let filepath = `./data/${decodeURI(req.params.filename)}`
     if(fileUtils.isFileExist(filepath)) {
         res.download(filepath)
@@ -52,6 +52,10 @@ app.get('/', (req, res) => {
   res.send('<h1>Hello worlds</h1>');
 });
 
+
+app.get('/connection', (req, res) => {
+    res.send('<h1>Hello worlds</h1>');
+  });
 
 io.on("connection", (socket) => {
     let streamRoutine = null    
@@ -107,7 +111,7 @@ io.on("connection", (socket) => {
     //         rudder,
     //         yaw,
     //     })
-    // }, 100)
+    // }, 1000)
 
     serialReadlineParser.on("data", (data) => {
         //console.log(data)
