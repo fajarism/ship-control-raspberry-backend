@@ -30,14 +30,14 @@ app.use(cors())
 //serialPort.pipe(byteLineParser)
 
 
-/*serialPort = new SerialPort("/dev/ttyACM0", {
+serialPort = new SerialPort("/dev/ttyACM0", {
         baudRate : 9600
 })
 let serialReadlineParser = new Readline()
 let byteLineParser = new ByteLine({
     length : 10
 })
-serialPort.pipe(serialReadlineParser)*/
+serialPort.pipe(serialReadlineParser)
 
 
 app.get('/download/:filename', (req, res) => {
@@ -101,7 +101,7 @@ io.on("connection", (socket) => {
         })
     })
 
-    streamRoutine = setInterval(() => {
+    /*streamRoutine = setInterval(() => {
          let timestamp = moment().valueOf()
          let rudder = 20.0 + Math.random() * 3
          let yaw = 20.0 + Math.random() * 2
@@ -112,9 +112,9 @@ io.on("connection", (socket) => {
              rudder,
              yaw,
          })
-     }, 1000)
+     }, 1000)*/
 
-    /*serialReadlineParser.on("data", (data) => {
+    serialReadlineParser.on("data", (data) => {
         //console.log(data)
         let [timestamp, yaw, rudder] = data.split(",")
 
@@ -124,7 +124,7 @@ io.on("connection", (socket) => {
             rudder : parseFloat(rudder),
             yaw : parseFloat(yaw),
         })
-    })*/
+    })
 
     io.sockets.emit("ship_control_file_list", {
         files : fileUtils.getAllRecordFiles()
