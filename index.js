@@ -33,9 +33,9 @@ serialPort = new SerialPort("/dev/ttyACM0", {
         baudRate : 9600
 })
 let serialReadlineParser = new Readline()
-let byteLineParser = new ByteLine({
-    length : 10
-})
+// let byteLineParser = new ByteLine({
+//     length : 10
+// })
 serialPort.pipe(serialReadlineParser)
 
 
@@ -56,6 +56,18 @@ app.get('/', (req, res) => {
 app.get('/connection', (req, res) => {
     res.send('<h1>Hello worlds</h1>');
   });
+
+serialReadlineParser.on("data", (data) => {
+    //console.log(data)
+    let [timestamp, yaw, rudder] = data.split(",")
+
+    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}\n`)
+    io.sockets.emit("ship_control_stream", {
+        timestamp,
+        rudder : parseFloat(rudder),
+        yaw : parseFloat(yaw),
+    })
+})
 
 io.on("connection", (socket) => {
     let streamRoutine = null    
@@ -112,18 +124,6 @@ io.on("connection", (socket) => {
     //         yaw,
     //     })
     // }, 1000)
-
-    serialReadlineParser.on("data", (data) => {
-        //console.log(data)
-        let [timestamp, yaw, rudder] = data.split(",")
-
-        if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}\n`)
-        io.sockets.emit("ship_control_stream", {
-            timestamp,
-            rudder : parseFloat(rudder),
-            yaw : parseFloat(yaw),
-        })
-    })
 
     io.sockets.emit("ship_control_file_list", {
         files : fileUtils.getAllRecordFiles()
