@@ -59,13 +59,14 @@ app.get('/connection', (req, res) => {
   });
 
 serialReadlineParser.on("data", (data) => {
-    //console.log(data)
-    let [timestamp, yaw, rudder] = data.split(",")
+    console.log(data)
+    let [timestamp, yaw, rudder, rudder2] = data.split(",")
 
-    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}\n`)
+    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder2)}\n`)
     io.sockets.emit("ship_control_stream", {
         timestamp,
         rudder : parseFloat(rudder),
+        rudder2: parseFloat(rudder2),
         yaw : parseFloat(yaw),
     })
 })
@@ -91,7 +92,7 @@ io.on("connection", (socket) => {
             fileStream = fileUtils.openFile(isFileExist.filename)
             
             // Create headers
-            fileUtils.saveToFile(fileStream, "timestamp,rudder,yaw \n")
+            fileUtils.saveToFile(fileStream, "timestamp, yaw, rudder 1, rudder2 \n")
             isRecording = true
             io.sockets.emit("ship_control_stream_recording_started", {
                 filename : data.filename
