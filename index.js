@@ -15,7 +15,7 @@ const SerialPort = require('serialport');
 const moment = require('moment');
 const e = require('cors');
 
-const PORT_NUMBER = 4000
+const PORT_NUMBER = 4000;
 
 let isRecording = false
 let fileStream
@@ -30,9 +30,15 @@ app.use(cors())
 //serialPort.pipe(byteLineParser)
 
 
+try {
+
 serialPort = new SerialPort("/dev/ttyACM0", {
         baudRate : 9600
-})
+})    
+} catch(e) {
+    console.log('error')
+    console.log(e)
+}
 let serialReadlineParser = new Readline()
 // let byteLineParser = new ByteLine({
 //     length : 10
@@ -59,16 +65,21 @@ app.get('/connection', (req, res) => {
   });
 
 serialReadlineParser.on("data", (data) => {
-    console.log(data)
+    //console.log(data)
     let [timestamp, yaw, rudder, rudder2] = data.split(",")
 
-    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder2)}\n`)
+    //if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder2)}\n`)
+    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder)}\n`)
     io.sockets.emit("ship_control_stream", {
         timestamp,
         rudder : parseFloat(rudder),
-        rudder2: parseFloat(rudder2),
+        // rudder2: parseFloat(rudder2),
+        rudder2: parseFloat(rudder),
         yaw : parseFloat(yaw),
     })
+    
+    serialPort.flush(() => {})
+    
 })
 
 io.on("connection", (socket) => {
