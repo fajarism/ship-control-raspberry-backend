@@ -31,11 +31,10 @@ app.use(cors())
 
 
 try {
-
-serialPort = new SerialPort("/dev/ttyACM0", {
-        baudRate : 9600
-})    
-} catch(e) {
+    serialPort = new SerialPort("/dev/ttyACM0", {
+        baudRate: 9600
+    })
+} catch (e) {
     console.log('error')
     console.log(e)
 }
@@ -48,7 +47,7 @@ serialPort.pipe(serialReadlineParser)
 
 app.get('/download/:filename', (req, res) => {
     let filepath = `./data/${decodeURI(req.params.filename)}`
-    if(fileUtils.isFileExist(filepath)) {
+    if (fileUtils.isFileExist(filepath)) {
         res.download(filepath)
     } else {
         res.sendStatus(404)
@@ -56,95 +55,81 @@ app.get('/download/:filename', (req, res) => {
 })
 
 app.get('/', (req, res) => {
-  res.send('<h1>Hello worlds</h1>');
+    res.send('<h1>Hello worlds</h1>');
 });
 
 
 app.get('/connection', (req, res) => {
     res.send('<h1>Hello worlds</h1>');
-  });
+});
 
 serialReadlineParser.on("data", (data) => {
     //console.log(data)
     let [timestamp, yaw, rudder, rudder2] = data.split(",")
 
     //if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder2)}\n`)
-    if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder)}\n`)
+    // if (isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(yaw)}, ${parseFloat(rudder)}, ${parseFloat(rudder)}\n`)
+    if (isRecording) fileUtils.saveToFile(fileStream, `${data}`)
     io.sockets.emit("ship_control_stream", {
         timestamp,
-        rudder : parseFloat(rudder),
+        rudder: parseFloat(rudder),
         // rudder2: parseFloat(rudder2),
         rudder2: parseFloat(rudder),
-        yaw : parseFloat(yaw),
+        yaw: parseFloat(yaw),
     })
-    
-    serialPort.flush(() => {})
-    
+
+    serialPort.flush(() => { })
+
 })
 
 io.on("connection", (socket) => {
-    let streamRoutine = null    
-    
+    let streamRoutine = null
+
     socket.on("disconnect", () => {
         console.log("disconnected")
-        if(streamRoutine) clearInterval(streamRoutine)
+        if (streamRoutine) clearInterval(streamRoutine)
     })
 
     socket.on("ship_control_stream_recording_start", (data) => {
         console.log("starting")
-        console.log(data)
 
         let isFileExist = fileUtils.isFileExist(data.filename)
-        if(isFileExist.success) {
+        if (isFileExist.success) {
             io.sockets.emit("ship_control_stream_recording_stopped_file_exists", {
-                filename : data.filename
+                filename: data.filename
             })
         } else {
             fileStream = fileUtils.openFile(isFileExist.filename)
-            
+
             // Create headers
             fileUtils.saveToFile(fileStream, "timestamp, yaw, rudder 1, rudder2 \n")
             isRecording = true
             io.sockets.emit("ship_control_stream_recording_started", {
-                filename : data.filename
+                filename: data.filename
             })
         }
     })
 
     socket.on("ship_control_stream_recording_stop", (data) => {
         console.log("stopping")
-        console.log(data)
         isRecording = false
-        
+
         io.sockets.emit("ship_control_stream_recording_stopped", {
-            filename : data.filename
+            filename: data.filename
         })
 
         io.sockets.emit("ship_control_file_list", {
-            files : fileUtils.getAllRecordFiles()
+            files: fileUtils.getAllRecordFiles()
         })
     })
 
-    /*streamRoutine = setInterval(() => {
-         let timestamp = moment().valueOf()
-         let rudder = 20.0 + Math.random() * 3
-         let yaw = 20.0 + Math.random() * 2
-
-         if(isRecording) fileUtils.saveToFile(fileStream, `${timestamp},${parseFloat(rudder)},${parseFloat(yaw)}\n`)
-         io.sockets.emit("ship_control_stream", {
-             timestamp,
-             rudder,
-             yaw,
-         })
-     }, 1000)*/
-
     io.sockets.emit("ship_control_file_list", {
-        files : fileUtils.getAllRecordFiles()
+        files: fileUtils.getAllRecordFiles()
     })
- 
+
     console.log("a user connected")
 })
 
 http.listen(PORT_NUMBER, () => {
-  console.log(`listening on *:${PORT_NUMBER}`);
+    console.log(`listening on *:${PORT_NUMBER}`);
 });
